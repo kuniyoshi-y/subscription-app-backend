@@ -5,23 +5,12 @@ from app.models.enums import BillingCycle
 
 
 class ExpenseCreate(BaseModel):
-    user_id: uuid.UUID
     name: str
     category_id: int
     amount: float
     billing_cycle: BillingCycle = BillingCycle.monthly
-    next_billing_date: date | None = None
-    contract_start_date: date | None = None
-    auto_renewal: bool = True
-    is_fixed: bool = False
-    is_subscription: bool = True
-    is_review_target: bool = True
-    auto_cancel_suggestion: bool = False
-    manual_cancel_suggestion: bool | None = None
     cancel_suggestion: bool = False
-    cancel_suggestion_reason: str | None = None
     memo: str | None = None
-
 
 class ExpenseUpdate(BaseModel):
     name: str | None = None

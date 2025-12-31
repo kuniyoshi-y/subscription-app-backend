@@ -6,21 +6,28 @@ from app.models.expense import Expense
 from app.schemas.expense import ExpenseCreate, ExpenseUpdate, ExpenseRead
 from app.core.dev_user import DEV_USER_ID
 import uuid
+from datetime import datetime
 
 router = APIRouter(prefix="/expenses", tags=["expenses"])
 
+from app.core.dev_user import DEV_USER_ID
+
 @router.get("", response_model=list[ExpenseRead])
 def list_expenses(db: Session = Depends(get_db)):
+    user_id = DEV_USER_ID
+
     rows = (
         db.execute(
             select(Expense)
-            .where(Expense.user_id == DEV_USER_ID)
+            .where(Expense.user_id == user_id)
+            .where(Expense.deleted_at.is_(None))
             .order_by(Expense.id.desc())
         )
         .scalars()
         .all()
     )
     return rows
+
 
 @router.get("/{expense_id}", response_model=ExpenseRead)
 def get_expense(expense_id: uuid.UUID, db: Session = Depends(get_db)):
@@ -40,12 +47,17 @@ def create_expense(payload: ExpenseCreate, db: Session = Depends(get_db)):
     return obj
 
 @router.patch("/{expense_id}", response_model=ExpenseRead)
-def update_expense(expense_id: int, payload: ExpenseUpdate, db: Session = Depends(get_db)):
+def update_expense(expense_id: uuid.UUID, payload: ExpenseUpdate, db: Session = Depends(get_db)):
     obj = db.get(Expense, expense_id)
-    if not obj:
+    if not obj or obj.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="Expense not found")
+
+    if obj.user_id != DEV_USER_ID:
         raise HTTPException(status_code=404, detail="Expense not found")
 
     for k, v in payload.model_dump(exclude_unset=True).items():
+        if k == "user_id":
+            continue
         setattr(obj, k, v)
 
     db.commit()
@@ -53,10 +65,14 @@ def update_expense(expense_id: int, payload: ExpenseUpdate, db: Session = Depend
     return obj
 
 @router.delete("/{expense_id}")
-def delete_expense(expense_id: int, db: Session = Depends(get_db)):
+def delete_expense(expense_id: uuid.UUID, db: Session = Depends(get_db)):
     obj = db.get(Expense, expense_id)
-    if not obj:
+    if not obj or obj.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Expense not found")
-    db.delete(obj)
+
+    if obj.user_id != DEV_USER_ID:
+        raise HTTPException(status_code=404, detail="Expense not found")
+
+    obj.deleted_at = datetime.utcnow()
     db.commit()
     return {"ok": True}
