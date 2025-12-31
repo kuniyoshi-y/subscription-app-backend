@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select, func, case
 
 from app.api.deps import get_db
+from app.core.dev_user import DEV_USER_ID
 from app.models.expense import Expense
 from app.models.category import Category
 from app.models.enums import BillingCycle
@@ -12,7 +13,9 @@ from app.schemas.dashboard import DashboardSummary, CategoryBreakdown
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 @router.get("/summary", response_model=DashboardSummary)
-def summary(user_id: uuid.UUID, db: Session = Depends(get_db)):
+def summary(db: Session = Depends(get_db)):
+    user_id: uuid.UUID = DEV_USER_ID
+
     monthly_amount = case(
         (Expense.billing_cycle == BillingCycle.monthly, Expense.amount),
         (Expense.billing_cycle == BillingCycle.yearly, Expense.amount / 12),
