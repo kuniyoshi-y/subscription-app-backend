@@ -17,3 +17,7 @@ factory = false
 
 [tool.setuptools]
 packages = ["app"]
+
+[tool.poetry]
+package-mode = false
+
