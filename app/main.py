@@ -5,8 +5,14 @@ from app.core.config import settings
 from app.api.routes.categories import router as categories_router
 from app.api.routes.expenses import router as expenses_router
 from app.api.routes.dashboard import router as dashboard_router
+from dotenv import load_dotenv
+from mangum import Mangum
+
+load_dotenv()  # .env ファイルの内容を環境変数に読み込む
 
 app = FastAPI(title="Subscription App Backend", version="0.1.0")
+
+handler = Mangum(app)
 
 app.add_middleware(
     CORSMiddleware,
