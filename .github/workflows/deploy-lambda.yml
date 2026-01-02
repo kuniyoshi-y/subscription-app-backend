@@ -10,7 +10,7 @@ permissions:
 
 env:
   AWS_REGION: ap-northeast-1
-  AWS_ACCOUNT_ID: ${{ env.AWS_ACCOUNT_ID }}
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
   ECR_REPOSITORY: subscription-app-backend
   LAMBDA_FUNCTION_NAME: subs-backend
   IMAGE_TAG: latest
