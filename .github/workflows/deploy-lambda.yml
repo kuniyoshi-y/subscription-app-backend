@@ -1,0 +1,44 @@
+name: Deploy Lambda (Container, OIDC)
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ap-northeast-1
+  AWS_ACCOUNT_ID: 304119515712
+  ECR_REPOSITORY: subscription-app-backend
+  LAMBDA_FUNCTION_NAME: subs-backend
+  IMAGE_TAG: latest
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::304119515712:role/github-actions-subs-backend-role
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        run: |
+          IMAGE_URI=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${IMAGE_TAG}
+          docker build --platform linux/amd64 -t $IMAGE_URI .
+          docker push $IMAGE_URI
+
+      - name: Update Lambda
+        run: |
+          IMAGE_URI=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${IMAGE_TAG}
+          aws lambda update-function-code \
+            --function-name ${LAMBDA_FUNCTION_NAME} \
+            --image-uri $IMAGE_URI
