@@ -55,7 +55,6 @@ requests-toolbelt==1.0.0
 shellingham==1.5.4
 SQLAlchemy==2.0.45
 starlette==0.50.0
--e git+https://github.com/kuniyoshi-y/subscription-app-backend.git@4776fafe99eb78b58fe2e36ceb24c063074399dc#egg=subs_backend
 tomlkit==0.13.3
 trove-classifiers==2025.12.1.14
 typing-inspection==0.4.2
