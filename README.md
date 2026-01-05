@@ -68,7 +68,15 @@ uvicorn app.main:app --reload
 ## Deployment
 Lambda + API Gateway + Neon：採用
 
-結果として AWS 固定費ゼロ構成 を実現しています。
+本バックエンドは、AWS Lambda（コンテナイメージ）上で FastAPI を実行しています。  
+GitHub Actions を用いた CI/CD により、main ブランチへのマージをトリガーに自動デプロイされます。
+
+1. main ブランチにコードをマージ
+2. GitHub Actions が起動
+3. Docker イメージをビルド
+4. Amazon ECR に push
+5. Lambda 関数のイメージを更新
+6. API Gateway 経由で最新の API が提供される
 
 ---
 
