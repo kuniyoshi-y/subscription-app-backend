@@ -1,5 +1,7 @@
 import uuid
-from fastapi import APIRouter, Depends
+from calendar import monthrange
+from datetime import date
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func, case
 
@@ -8,7 +10,13 @@ from app.core.dev_user import DEV_USER_ID
 from app.models.expense import Expense
 from app.models.category import Category
 from app.models.enums import BillingCycle
-from app.schemas.dashboard import DashboardSummary, CategoryBreakdown
+from app.schemas.dashboard import (
+    CategoryBreakdown,
+    CategoryMonthlyAmount,
+    DashboardSummary,
+    MonthlyTrendItem,
+    MonthlyTrendResponse,
+)
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
@@ -68,3 +76,67 @@ def summary(db: Session = Depends(get_db)):
         by_category=by_category,
         cancel_candidates=int(cancel_candidates),
     )
+
+
+@router.get("/monthly_trend", response_model=MonthlyTrendResponse)
+def monthly_trend(
+    months: int = Query(default=6, ge=1, le=24, description="遡る月数（デフォルト6ヶ月）"),
+    db: Session = Depends(get_db),
+):
+    """月別支出推移（カテゴリ別）
+
+    現在有効な支出から各月の金額を積み上げて返す。
+    - monthly: 毎月そのまま計上
+    - yearly : 月割り（÷12）で計上
+    - other  : 毎月そのまま計上（MVP簡略化）
+    """
+    user_id: uuid.UUID = DEV_USER_ID
+    today = date.today()
+
+    # 遡るN月分の (year, month) リストを生成（古い順）
+    target_months: list[tuple[int, int]] = []
+    for i in range(months - 1, -1, -1):
+        m = today.month - i
+        y = today.year
+        while m <= 0:
+            m += 12
+            y -= 1
+        target_months.append((y, m))
+
+    # アクティブな支出をカテゴリ情報と一緒に取得
+    rows = db.execute(
+        select(Expense, Category)
+        .join(Category, Expense.category_id == Category.id)
+        .where(Expense.user_id == user_id)
+        .where(Expense.deleted_at.is_(None))
+        .where(Category.deleted_at.is_(None))
+    ).all()
+
+    # 月ごとの集計
+    items: list[MonthlyTrendItem] = []
+    for year, month in target_months:
+        cat_totals: dict[int, dict] = {}
+
+        for expense, category in rows:
+            if expense.billing_cycle == BillingCycle.yearly:
+                amount = float(expense.amount) / 12
+            else:
+                amount = float(expense.amount)
+
+            if category.id not in cat_totals:
+                cat_totals[category.id] = {
+                    "category_id": category.id,
+                    "category_name": category.name,
+                    "amount": 0.0,
+                }
+            cat_totals[category.id]["amount"] += amount
+
+        by_category = [
+            CategoryMonthlyAmount(**v)
+            for v in sorted(cat_totals.values(), key=lambda x: x["amount"], reverse=True)
+        ]
+        total = sum(c.amount for c in by_category)
+
+        items.append(MonthlyTrendItem(year=year, month=month, total=total, by_category=by_category))
+
+    return MonthlyTrendResponse(items=items)
