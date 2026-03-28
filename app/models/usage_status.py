@@ -12,3 +12,4 @@ class UsageStatus(Base):
     score: Mapped[int] = mapped_column(Integer, nullable=False)
 
     usage_logs = relationship("UsageLog", back_populates="usage_status")
+
