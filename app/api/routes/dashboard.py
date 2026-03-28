@@ -11,6 +11,7 @@ from app.models.expense import Expense
 from app.models.category import Category
 from app.models.enums import BillingCycle
 from app.schemas.dashboard import (
+    CancelCandidate,
     CategoryBreakdown,
     CategoryMonthlyAmount,
     DashboardSummary,
@@ -67,6 +68,26 @@ def summary(db: Session = Depends(get_db)):
         for r in rows
     ]
 
+    # 解約候補リストを取得
+    candidate_rows = db.execute(
+        select(Expense)
+        .where(Expense.user_id == user_id)
+        .where(Expense.deleted_at.is_(None))
+        .where(Expense.cancel_suggestion.is_(True))
+        .order_by(Expense.amount.desc())
+    ).scalars().all()
+
+    cancel_candidate_list = [
+        CancelCandidate(
+            id=e.id,
+            name=e.name,
+            amount=float(e.amount),
+            billing_cycle=e.billing_cycle,
+            cancel_suggestion_reason=e.cancel_suggestion_reason,
+        )
+        for e in candidate_rows
+    ]
+
     total_monthly_f = float(total_monthly)
 
     return DashboardSummary(
@@ -75,6 +96,7 @@ def summary(db: Session = Depends(get_db)):
         total_yearly=total_monthly_f * 12,
         by_category=by_category,
         cancel_candidates=int(cancel_candidates),
+        cancel_candidate_list=cancel_candidate_list,
     )
 
 
