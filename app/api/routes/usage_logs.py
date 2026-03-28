@@ -10,6 +10,7 @@ from app.core.dev_user import DEV_USER_ID
 from app.models.expense import Expense
 from app.models.usage_log import UsageLog
 from app.schemas.usage_log import UsageLogRead, UsageLogUpsert
+from app.services.cancel_suggestion import recalculate_cancel_suggestion
 
 router = APIRouter(tags=["usage_logs"])
 
@@ -66,6 +67,9 @@ def upsert_usage_log(payload: UsageLogUpsert, db: Session = Depends(get_db)):
         )
         db.add(log)
 
+    db.flush()
+    # usage_log 保存後に解約候補を再計算
+    recalculate_cancel_suggestion(payload.expense_id, db)
     db.commit()
     db.refresh(log)
     return log
