@@ -9,8 +9,9 @@ from sqlalchemy.orm import Session
 
 from app.core.db import SessionLocal
 from app.models.user import User
-from app.models.category import Category, CategoryType  # あなたの実装に合わせて import
-from app.models.expense import Expense, BillingCycle    # あなたの実装に合わせて import
+from app.models.usage_status import UsageStatus
+from app.models.category import Category, CategoryType
+from app.models.expense import Expense, BillingCycle
 
 
 DEV_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
@@ -30,6 +31,23 @@ def upsert_dev_user(db: Session) -> User:
     db.add(user)
     db.flush()
     return user
+
+
+def upsert_usage_statuses(db: Session) -> None:
+    """UsageStatusマスタを投入（idが存在すれば再利用）"""
+    masters = [
+        {'id': 1, 'label': 'よく使う',   'score': 3},
+        {'id': 2, 'label': 'たまに',     'score': 2},
+        {'id': 3, 'label': '使ってない', 'score': 1},
+    ]
+    for m in masters:
+        existing = db.get(UsageStatus, m['id'])
+        if existing:
+            existing.label = m['label']
+            existing.score = m['score']
+        else:
+            db.add(UsageStatus(**m))
+    db.flush()
 
 
 def upsert_categories(db: Session) -> list[Category]:
@@ -170,6 +188,7 @@ def main() -> None:
     db = SessionLocal()
     try:
         upsert_dev_user(db)
+        upsert_usage_statuses(db)
         categories = upsert_categories(db)
         upsert_expenses(db, categories)
         db.commit()
