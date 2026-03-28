@@ -56,11 +56,18 @@ def upsert_categories(db: Session) -> list[Category]:
     ※ is_system_default=True, user_id=None を前提
     """
     seeds = [
-        dict(name="動画配信", type=CategoryType.subscription, sort_order=10),
-        dict(name="家賃", type=CategoryType.fixed, sort_order=1),
-        dict(name="保険", type=CategoryType.fixed, sort_order=2),
-        dict(name="携帯", type=CategoryType.semi_fixed, sort_order=20),
-        dict(name="その他", type=CategoryType.semi_fixed, sort_order=99),
+        # 固定費
+        dict(name="家賃",           type=CategoryType.fixed,        sort_order=1),
+        dict(name="保険",           type=CategoryType.fixed,        sort_order=2),
+        dict(name="光熱費",         type=CategoryType.fixed,        sort_order=3),
+        # サブスク
+        dict(name="動画配信",       type=CategoryType.subscription, sort_order=10),
+        dict(name="音楽",           type=CategoryType.subscription, sort_order=11),
+        dict(name="クラウド/ツール", type=CategoryType.subscription, sort_order=12),
+        # 半固定
+        dict(name="携帯",           type=CategoryType.semi_fixed,   sort_order=20),
+        dict(name="ジム",           type=CategoryType.semi_fixed,   sort_order=21),
+        dict(name="その他",         type=CategoryType.semi_fixed,   sort_order=99),
     ]
 
     result: list[Category] = []

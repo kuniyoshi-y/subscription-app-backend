@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import select
@@ -47,9 +49,9 @@ def create_category(payload: CategoryCreate, db: Session = Depends(get_db)):
 @router.delete("/{category_id}")
 def delete_category(category_id: int, db: Session = Depends(get_db)):
     obj = db.get(Category, category_id)
-    if not obj:
+    if not obj or obj.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Category not found")
 
-    db.delete(obj)
+    obj.deleted_at = datetime.now(timezone.utc)
     db.commit()
     return {"ok": True}

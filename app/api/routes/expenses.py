@@ -6,7 +6,7 @@ from app.models.expense import Expense
 from app.schemas.expense import ExpenseCreate, ExpenseUpdate, ExpenseRead
 from app.core.dev_user import DEV_USER_ID
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 router = APIRouter(prefix="/expenses", tags=["expenses"])
 
@@ -73,6 +73,6 @@ def delete_expense(expense_id: uuid.UUID, db: Session = Depends(get_db)):
     if obj.user_id != DEV_USER_ID:
         raise HTTPException(status_code=404, detail="Expense not found")
 
-    obj.deleted_at = datetime.utcnow()
+    obj.deleted_at = datetime.now(timezone.utc)
     db.commit()
     return {"ok": True}
