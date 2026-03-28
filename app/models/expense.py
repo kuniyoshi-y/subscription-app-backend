@@ -48,3 +48,4 @@ class Expense(Base, TimestampSoftDeleteMixin):
     category = relationship("Category", back_populates="expenses")
     user = relationship("User", back_populates="expenses", foreign_keys=[user_id])
     usage_logs = relationship("UsageLog", back_populates="expense")
+    payment_histories = relationship("PaymentHistory", back_populates="expense")
