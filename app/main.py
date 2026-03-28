@@ -6,6 +6,7 @@ from app.api.routes.categories import router as categories_router
 from app.api.routes.expenses import router as expenses_router
 from app.api.routes.dashboard import router as dashboard_router
 from app.api.routes.usage_logs import router as usage_logs_router
+from app.api.routes.payment_histories import router as payment_histories_router
 from dotenv import load_dotenv
 from mangum import Mangum
 
@@ -27,6 +28,7 @@ app.include_router(categories_router)
 app.include_router(expenses_router)
 app.include_router(dashboard_router)
 app.include_router(usage_logs_router)
+app.include_router(payment_histories_router)
 
 @app.get("/health")
 def health():
