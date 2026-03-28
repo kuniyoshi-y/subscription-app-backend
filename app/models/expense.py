@@ -13,7 +13,9 @@ class Expense(Base, TimestampSoftDeleteMixin):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    )
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"), nullable=False)
@@ -44,3 +46,4 @@ class Expense(Base, TimestampSoftDeleteMixin):
     memo: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     category = relationship("Category", back_populates="expenses")
+    user = relationship("User", back_populates="expenses", foreign_keys=[user_id])

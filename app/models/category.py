@@ -1,4 +1,4 @@
-from sqlalchemy import String, Boolean, Integer, Enum as SAEnum
+from sqlalchemy import String, Boolean, Integer, Enum as SAEnum, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
@@ -12,8 +12,9 @@ class Category(Base, TimestampSoftDeleteMixin):
 
     id: Mapped[int] = mapped_column(primary_key=True)
 
-    # Users未実装でもOK：nullable UUIDにしておく
-    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
 
     name: Mapped[str] = mapped_column(String(100), nullable=False)
 
@@ -26,3 +27,4 @@ class Category(Base, TimestampSoftDeleteMixin):
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     expenses = relationship("Expense", back_populates="category")
+    user = relationship("User", back_populates="categories", foreign_keys=[user_id])

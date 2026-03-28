@@ -9,3 +9,7 @@ class BillingCycle(str, enum.Enum):
     monthly = "monthly"
     yearly = "yearly"
     other = "other"
+
+class UserRole(str, enum.Enum):
+    user = "user"
+    admin = "admin"

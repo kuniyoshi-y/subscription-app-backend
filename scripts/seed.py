@@ -8,11 +8,28 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.db import SessionLocal
+from app.models.user import User
 from app.models.category import Category, CategoryType  # あなたの実装に合わせて import
 from app.models.expense import Expense, BillingCycle    # あなたの実装に合わせて import
 
 
 DEV_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
+
+
+def upsert_dev_user(db: Session) -> User:
+    """開発用固定ユーザーを投入（存在すれば再利用）"""
+    existing = db.get(User, DEV_USER_ID)
+    if existing:
+        return existing
+
+    user = User(
+        id=DEV_USER_ID,
+        email="dev@example.com",
+        name="Dev User",
+    )
+    db.add(user)
+    db.flush()
+    return user
 
 
 def upsert_categories(db: Session) -> list[Category]:
@@ -152,6 +169,7 @@ def upsert_expenses(db: Session, categories: Iterable[Category]) -> None:
 def main() -> None:
     db = SessionLocal()
     try:
+        upsert_dev_user(db)
         categories = upsert_categories(db)
         upsert_expenses(db, categories)
         db.commit()
