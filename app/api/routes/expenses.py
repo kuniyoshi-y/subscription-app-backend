@@ -5,8 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
-from app.api.deps import get_db
-from app.core.dev_user import DEV_USER_ID
+from app.api.deps import get_db, get_current_user_id
 from app.models.category import Category
 from app.models.expense import Expense
 from app.models.enums import CategoryType
@@ -25,9 +24,10 @@ def _flags_from_category_type(category_type: CategoryType) -> dict:
     return {"is_fixed": False, "is_subscription": True, "is_review_target": True}
 
 @router.get("", response_model=list[ExpenseRead])
-def list_expenses(db: Session = Depends(get_db)):
-    user_id = DEV_USER_ID
-
+def list_expenses(
+    db: Session = Depends(get_db),
+    user_id: uuid.UUID = Depends(get_current_user_id),
+):
     rows = (
         db.execute(
             select(Expense)
@@ -42,20 +42,28 @@ def list_expenses(db: Session = Depends(get_db)):
 
 
 @router.get("/{expense_id}", response_model=ExpenseRead)
-def get_expense(expense_id: uuid.UUID, db: Session = Depends(get_db)):
+def get_expense(
+    expense_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    user_id: uuid.UUID = Depends(get_current_user_id),
+):
     obj = db.get(Expense, expense_id)
-    if not obj or obj.deleted_at is not None:
+    if not obj or obj.deleted_at is not None or obj.user_id != user_id:
         raise HTTPException(status_code=404, detail="Expense not found")
     return obj
 
 @router.post("", response_model=ExpenseRead)
-def create_expense(payload: ExpenseCreate, db: Session = Depends(get_db)):
+def create_expense(
+    payload: ExpenseCreate,
+    db: Session = Depends(get_db),
+    user_id: uuid.UUID = Depends(get_current_user_id),
+):
     category = db.get(Category, payload.category_id)
     if not category or category.deleted_at is not None:
         raise HTTPException(status_code=404, detail="Category not found")
 
     data = payload.model_dump()
-    data["user_id"] = DEV_USER_ID
+    data["user_id"] = user_id
     # カテゴリ種別からフラグを自動セット（ペイロードの値より優先）
     data.update(_flags_from_category_type(category.type))
 
@@ -66,12 +74,14 @@ def create_expense(payload: ExpenseCreate, db: Session = Depends(get_db)):
     return obj
 
 @router.patch("/{expense_id}", response_model=ExpenseRead)
-def update_expense(expense_id: uuid.UUID, payload: ExpenseUpdate, db: Session = Depends(get_db)):
+def update_expense(
+    expense_id: uuid.UUID,
+    payload: ExpenseUpdate,
+    db: Session = Depends(get_db),
+    user_id: uuid.UUID = Depends(get_current_user_id),
+):
     obj = db.get(Expense, expense_id)
-    if not obj or obj.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Expense not found")
-
-    if obj.user_id != DEV_USER_ID:
+    if not obj or obj.deleted_at is not None or obj.user_id != user_id:
         raise HTTPException(status_code=404, detail="Expense not found")
 
     for k, v in payload.model_dump(exclude_unset=True).items():
@@ -84,12 +94,13 @@ def update_expense(expense_id: uuid.UUID, payload: ExpenseUpdate, db: Session = 
     return obj
 
 @router.delete("/{expense_id}")
-def delete_expense(expense_id: uuid.UUID, db: Session = Depends(get_db)):
+def delete_expense(
+    expense_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    user_id: uuid.UUID = Depends(get_current_user_id),
+):
     obj = db.get(Expense, expense_id)
-    if not obj or obj.deleted_at is not None:
-        raise HTTPException(status_code=404, detail="Expense not found")
-
-    if obj.user_id != DEV_USER_ID:
+    if not obj or obj.deleted_at is not None or obj.user_id != user_id:
         raise HTTPException(status_code=404, detail="Expense not found")
 
     obj.deleted_at = datetime.now(timezone.utc)

@@ -8,4 +8,8 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     CORS_ORIGINS: str = "http://localhost:3000"
 
+    COGNITO_REGION: str = "ap-northeast-1"
+    COGNITO_USER_POOL_ID: str = ""
+    COGNITO_CLIENT_ID: str = ""
+
 settings = Settings()
