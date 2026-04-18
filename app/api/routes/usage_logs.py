@@ -5,8 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db
-from app.core.dev_user import DEV_USER_ID
+from app.api.deps import get_db, get_current_user_id
 from app.models.expense import Expense
 from app.models.usage_log import UsageLog
 from app.schemas.usage_log import UsageLogRead, UsageLogUpsert
@@ -16,10 +15,14 @@ router = APIRouter(tags=["usage_logs"])
 
 
 @router.get("/expenses/{expense_id}/usage_logs", response_model=list[UsageLogRead])
-def list_usage_logs(expense_id: uuid.UUID, db: Session = Depends(get_db)):
+def list_usage_logs(
+    expense_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    user_id: uuid.UUID = Depends(get_current_user_id),
+):
     """指定サービスの利用状況ログ一覧（月の降順）"""
     expense = db.get(Expense, expense_id)
-    if not expense or expense.deleted_at is not None or expense.user_id != DEV_USER_ID:
+    if not expense or expense.deleted_at is not None or expense.user_id != user_id:
         raise HTTPException(status_code=404, detail="Expense not found")
 
     rows = (
@@ -35,10 +38,14 @@ def list_usage_logs(expense_id: uuid.UUID, db: Session = Depends(get_db)):
 
 
 @router.post("/usage_logs", response_model=UsageLogRead)
-def upsert_usage_log(payload: UsageLogUpsert, db: Session = Depends(get_db)):
+def upsert_usage_log(
+    payload: UsageLogUpsert,
+    db: Session = Depends(get_db),
+    user_id: uuid.UUID = Depends(get_current_user_id),
+):
     """利用状況ログの登録・更新（同月は上書き）"""
     expense = db.get(Expense, payload.expense_id)
-    if not expense or expense.deleted_at is not None or expense.user_id != DEV_USER_ID:
+    if not expense or expense.deleted_at is not None or expense.user_id != user_id:
         raise HTTPException(status_code=404, detail="Expense not found")
 
     # is_skipped=True のときは rating を強制クリア
@@ -76,7 +83,11 @@ def upsert_usage_log(payload: UsageLogUpsert, db: Session = Depends(get_db)):
 
 
 @router.delete("/usage_logs/{log_id}")
-def delete_usage_log(log_id: uuid.UUID, db: Session = Depends(get_db)):
+def delete_usage_log(
+    log_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    user_id: uuid.UUID = Depends(get_current_user_id),
+):
     """利用状況ログの削除"""
     log = db.get(UsageLog, log_id)
     if not log:
@@ -84,7 +95,7 @@ def delete_usage_log(log_id: uuid.UUID, db: Session = Depends(get_db)):
 
     # 所有者チェック（ログからExpenseを辿る）
     expense = db.get(Expense, log.expense_id)
-    if not expense or expense.user_id != DEV_USER_ID:
+    if not expense or expense.user_id != user_id:
         raise HTTPException(status_code=404, detail="UsageLog not found")
 
     db.delete(log)

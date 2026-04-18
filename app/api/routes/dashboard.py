@@ -5,8 +5,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func, case
 
-from app.api.deps import get_db
-from app.core.dev_user import DEV_USER_ID
+from app.api.deps import get_db, get_current_user_id
 from app.models.expense import Expense
 from app.models.category import Category
 from app.models.enums import BillingCycle
@@ -22,8 +21,10 @@ from app.schemas.dashboard import (
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 @router.get("/summary", response_model=DashboardSummary)
-def summary(db: Session = Depends(get_db)):
-    user_id: uuid.UUID = DEV_USER_ID
+def summary(
+    db: Session = Depends(get_db),
+    user_id: uuid.UUID = Depends(get_current_user_id),
+):
 
     monthly_amount = case(
         (Expense.billing_cycle == BillingCycle.monthly, Expense.amount),
@@ -104,6 +105,7 @@ def summary(db: Session = Depends(get_db)):
 def monthly_trend(
     months: int = Query(default=6, ge=1, le=24, description="遡る月数（デフォルト6ヶ月）"),
     db: Session = Depends(get_db),
+    user_id: uuid.UUID = Depends(get_current_user_id),
 ):
     """月別支出推移（カテゴリ別）
 
@@ -112,7 +114,6 @@ def monthly_trend(
     - yearly : 月割り（÷12）で計上
     - other  : 毎月そのまま計上（MVP簡略化）
     """
-    user_id: uuid.UUID = DEV_USER_ID
     today = date.today()
 
     # 遡るN月分の (year, month) リストを生成（古い順）
