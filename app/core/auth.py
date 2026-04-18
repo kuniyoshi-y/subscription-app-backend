@@ -71,7 +71,7 @@ def verify_token(token: str) -> dict:
 def get_current_user_sub(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> str:
-    """JWTを検証してCognitoのsubを返す（各エンドポイントの依存注入に使う）"""
+    """JWTを検証してCognitoのsubを返す"""
     claims = verify_token(credentials.credentials)
     sub = claims.get("sub")
     if not sub:
@@ -80,3 +80,10 @@ def get_current_user_sub(
             detail="sub claim not found",
         )
     return sub
+
+
+def get_current_claims(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+) -> dict:
+    """JWTを検証してclaimsを全て返す（email等の取得に使う）"""
+    return verify_token(credentials.credentials)
