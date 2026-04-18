@@ -12,4 +12,8 @@ class Settings(BaseSettings):
     COGNITO_USER_POOL_ID: str = ""
     COGNITO_CLIENT_ID: str = ""
 
+    # ローカル開発用（本番は必ずfalseにする）
+    DEV_MODE: bool = False
+    DEV_USER_ID: str = "00000000-0000-0000-0000-000000000001"
+
 settings = Settings()

@@ -34,6 +34,20 @@ def upgrade() -> None:
         sa.UniqueConstraint('email'),
     )
 
+    # 既存データのために dev user を挿入（存在しなければ）
+    op.execute("""
+        INSERT INTO users (id, email, name, role, created_at, updated_at)
+        VALUES (
+            '00000000-0000-0000-0000-000000000001',
+            'dev@example.com',
+            'Dev User',
+            'user',
+            now(),
+            now()
+        )
+        ON CONFLICT (id) DO NOTHING
+    """)
+
     # expenses.user_id に FK を追加
     op.create_foreign_key(
         'fk_expenses_user_id',
